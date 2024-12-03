@@ -98,7 +98,7 @@ public:
     double secondClassPrice;
 
     // Function to check seat availability
-    bool isSeatAvailable(int classType, const int& seatNumber, const vector<Reservation>& reservations) {
+    bool isSeatAvailable(int classType, const int& seatNumber, vector<Reservation> reservations) {
         if (classType == 1) {
             if (firstClassSeats <= 0) return false; // No seats available
         } else if (classType == 2) {
@@ -327,7 +327,11 @@ public:
             << "\n   Reservation time: " << reservation.reservationTime
             << "\n   Class: " << reservation.classType
             << "\n   Seat number: " << reservation.seatNumber << endl << "\n";
-        } else cout << "You don't have any bookings!" << endl << "\n";
+        }
+        }
+
+        if (reservations.empty()) {
+           throw runtime_error("You don't have any bookings!");
         }
     }
 
@@ -350,6 +354,49 @@ public:
              << reservation.seatNumber << "\n";
     }
 }
+
+void deleteReservation(string user, string trainId, int seatNumber, int classType) {
+    bool found = false;
+    vector<Reservation> updatedReservations;
+
+    // search for the reservation that we want to delete
+    for (size_t i = 0; i < reservations.size(); ++i) {
+        const Reservation& reservation = reservations[i];
+        if (reservation.user == user && 
+            reservation.trainId == trainId && 
+            reservation.seatNumber == seatNumber && 
+            reservation.classType == classType) {
+            found = true;
+            continue; // skip the reservation that was found
+        }
+        updatedReservations.push_back(reservation);
+    }
+
+    if (!found) {
+        throw runtime_error("Reservation not found!");
+    }
+
+    // update the reservations vector
+    reservations = updatedReservations;
+
+    // save the new reservations list in the reservations file
+    ofstream file(reservationsFile);
+    if (!file.is_open()) {
+        throw runtime_error("Could not open reservations file for updating!");
+    }
+
+    for (size_t i = 0; i < reservations.size(); ++i) {
+        Reservation reservation = reservations[i];
+        file << reservation.user << "," 
+             << reservation.trainId << "," 
+             << reservation.reservationDate << "," 
+             << reservation.reservationTime << "," 
+             << reservation.classType << ","
+             << reservation.seatNumber << "\n";
+    }
+    file.close();
+}
+
 
     void addTrain(Train train) {
     if (!validateDateTime(train.departureDate, train.departureTime)) {
@@ -375,8 +422,12 @@ public:
          << train.secondClassPrice << "\n";
 }
 
-void removeTrain(const string& trainId) {
+void removeTrain(string trainId) {
     bool found = false;
+
+    if (trains.empty()) {
+        throw runtime_error("There are no trains to remove!");
+    }
 
     for (size_t i = 0; i < trains.size(); ++i) {
         if (trains[i].trainId == trainId) {
@@ -543,7 +594,7 @@ bool validateDateTime(string date, string timp) {
     return true; // Date and time are valid
 }
 
-    bool validateReservation(Reservation& reservation, const vector<Train>& trains) {
+    bool validateReservation(Reservation& reservation, vector<Train> trains) {
     for (size_t i = 0; i < trains.size(); ++i) {
         Train train = trains[i];
         if (train.trainId == reservation.trainId) {
@@ -568,7 +619,7 @@ bool validateLocation(const string location) {
 }
 };
 
-void operatorLogin(UserManager userManager, TrainManager trainManager) {
+void operatorLogin(TrainManager trainManager) {
     string email, password;
     cout << "\n=== Operator Login ===\n";
     cout << "Email: ";
@@ -577,78 +628,107 @@ void operatorLogin(UserManager userManager, TrainManager trainManager) {
     cin >> password;
     
     try {
-        if (userManager.login(email, password)) {
-            cout << "\nLogin successful as operator!\n";
+    ifstream operatorFile("operators.csv"); // Read from operators.csv file
+    if (!operatorFile.is_open()) {
+        throw runtime_error("Error: Cannot access operator database!");
+    }
+
+    bool isOperator = false;
+    string line;
+    while (getline(operatorFile, line)) {
+        size_t comma = line.find(',');
+        if (comma != string::npos) {
+            string fileEmail = line.substr(0, comma);
+            string filePassword = line.substr(comma + 1);
             
-            int option;
-            do {
-                cout << "\nOperator Options:\n";
-                cout << "1. Add new train\n";
-                cout << "2. Remove train\n";
-                cout << "3. View all trains\n";
-                cout << "4. Exit to main menu\n";
-                cout << "Choose an option: ";
-                cin >> option;
+            // Remove any trailing whitespace
+            fileEmail.erase(fileEmail.find_last_not_of(" \n\r\t") + 1);
+            filePassword.erase(filePassword.find_last_not_of(" \n\r\t") + 1);
 
-                switch (option) {
-                    case 1: {
-                        cout << "\n=== Add New Train ===\n";
-                        Train train;
-                        cout << "Train ID: ";
-                        cin >> train.trainId;
-                        cout << "Departure city: ";
-                        cin >> train.departureLocation;
-                        cout << "Arrival city: ";
-                        cin >> train.arrivalLocation;
-                        cout << "Departure date (DD/MM/YYYY): ";
-                        cin >> train.departureDate;
-                        cout << "Departure time (HH:MM): ";
-                        cin >> train.departureTime;
-                        cout << "Arrival date (DD/MM/YYYY): ";
-                        cin >> train.arrivalDate;
-                        cout << "Arrival time (HH:MM): ";
-                        cin >> train.arrivalTime;
-                        cout << "Number of first-class seats: ";
-                        cin >> train.firstClassSeats;
-                        cout << "Number of second-class seats: ";
-                        cin >> train.secondClassSeats;
-                        cout << "Price for first-class: ";
-                        cin >> train.firstClassPrice;
-                        cout << "Price for second-class: ";
-                        cin >> train.secondClassPrice;
-
-                        try {
-                            trainManager.addTrain(train);
-                            cout << "The train has been successfully added!\n";
-                        } catch (runtime_error e) {
-                            cerr << "Error adding train: " << e.what() << endl;
-                        }
-                        break;
-                    }
-                    case 2: {
-                        cout << "\n=== Remove Train ===\n";
-                        string trainId;
-                        cout << "Enter the train ID to remove: ";
-                        cin >> trainId;
-                        trainManager.removeTrain(trainId);
-                        cout << "Train " << trainId << " has been removed.\n";
-                        break;
-                    }
-                    case 3: {
-                        cout << "\n=== All Trains List ===\n";
-                        trainManager.getAllTrains();
-                        break;
-                    }
-                    case 4:
-                        cout << "\nExiting to main menu...\n";
-                        break;
-                    default:
-                        cout << "\nInvalid option! Please try again.\n";
-                }
-            } while (option != 4);
+            if (fileEmail == email && filePassword == password) {
+                isOperator = true;
+                break;
+            }
         }
+    }
+    operatorFile.close();
+    if (!isOperator) {
+        throw runtime_error("Access denied: Invalid operator credentials!");
+    }
+    cout << "\nLogin successful as operator!\n";
+    
+    int option;
+    do {
+        cout << "\nOperator Options:\n";
+        cout << "1. Add new train\n";
+        cout << "2. Remove train\n";
+        cout << "3. View all trains\n";
+        cout << "4. Exit to main menu\n";
+        cout << "Choose an option: ";
+        cin >> option;
+
+        switch (option) {
+            case 1: {
+                cout << "\n=== Add New Train ===\n";
+                Train train;
+                cout << "Train ID: ";
+                cin >> train.trainId;
+                cout << "Departure city: ";
+                cin >> train.departureLocation;
+                cout << "Arrival city: ";
+                cin >> train.arrivalLocation;
+                cout << "Departure date (DD/MM/YYYY): ";
+                cin >> train.departureDate;
+                cout << "Departure time (HH:MM): ";
+                cin >> train.departureTime;
+                cout << "Arrival date (DD/MM/YYYY): ";
+                cin >> train.arrivalDate;
+                cout << "Arrival time (HH:MM): ";
+                cin >> train.arrivalTime;
+                cout << "Number of first-class seats: ";
+                cin >> train.firstClassSeats;
+                cout << "Number of second-class seats: ";
+                cin >> train.secondClassSeats;
+                cout << "Price for first-class: ";
+                cin >> train.firstClassPrice;
+                cout << "Price for second-class: ";
+                cin >> train.secondClassPrice;
+
+                try {
+                    trainManager.addTrain(train);
+                    cout << "The train has been successfully added!\n";
+                } catch (runtime_error e) {
+                    cerr << "Error adding train: " << e.what() << endl;
+                }
+                break;
+            }
+            case 2: {
+                cout << "\n=== Remove Train ===\n";
+                try {
+                    string trainId;
+                    cout << "Enter the train ID to remove: ";
+                    cin >> trainId;
+                    trainManager.removeTrain(trainId);
+                    cout << "Train " << trainId << " has been removed.\n";
+                } catch (runtime_error e) {
+                    cerr << e.what() << endl;
+                }
+                break;
+            }
+            case 3: {
+                cout << "\n=== All Trains List ===\n";
+                trainManager.getAllTrains();
+                break;
+            }
+            case 4:
+                cout << "\nExiting to main menu...\n";
+                break;
+            default:
+                cout << "\nInvalid option! Please try again.\n";
+        }
+    } while (option != 4);
     } catch (runtime_error e) {
-        cerr << "Login error: " << e.what() << endl;
+        cerr << e.what() << endl;
     }
 }
 
@@ -670,7 +750,8 @@ void userLogin(UserManager userManager, TrainManager trainManager) {
                 cout << "1. Search for a train\n";
                 cout << "2. Reserve a seat\n";
                 cout << "3. View my reservations\n";
-                cout << "4. Return to main menu\n";
+                cout << "4. Delete a reservation\n";
+                cout << "5. Return to main menu\n";
                 cout << "Choose an option: ";
                 cin >> option;
             
@@ -728,19 +809,41 @@ void userLogin(UserManager userManager, TrainManager trainManager) {
                         trainManager.showReservations(email);
                         cout << "\n\n";
                     } catch (runtime_error e) {
-                        cerr << "\nError displaying reservations: " << e.what() << endl;
+                        cerr << e.what() << endl;
                     }
                 } else if (option == 4) {
+                    string trainId;
+                    int seatNumber, classType;
+                    
+                    cout << "\n=== Delete Reservation ===\n";
+                    cout << "Current reservations:\n";
+                    try {
+                        trainManager.showReservations(email);
+                    
+                        cout << "\nEnter the details of the reservation to delete:\n";
+                        cout << "Train ID: ";
+                        cin >> trainId;
+                        cout << "Seat number: ";
+                        cin >> seatNumber;
+                        cout << "Class type (1 or 2): ";
+                        cin >> classType;
+
+                        trainManager.deleteReservation(email, trainId, seatNumber, classType);
+                        cout << "Reservation successfully deleted!\n";
+                    } catch (runtime_error e) {
+                        cerr << e.what() << endl;
+                    }
+                } else if (option == 5) {
                     cout << "\nReturning to main menu...\n";
                 } else {
                     cout << "\nInvalid option!";
                 }
-            } while (option != 4);
+            } while (option != 5);
         } else {
             throw runtime_error("Incorrect email or password!\n");
         }    
     } catch (runtime_error e) {
-        cerr << "\nLogin error: " << e.what() << "\nIf you do not have an account, please register!" << endl;
+        cerr << "\nLogin error: " << e.what() << "If you do not have an account, please register!" << endl;
     }
 }
 
@@ -782,7 +885,7 @@ int main() {
 
             switch (option) {
                 case 1:
-                    operatorLogin(userManager, trainManager);
+                    operatorLogin(trainManager);
                     break;
                 case 2:
                     userLogin(userManager, trainManager);
@@ -799,7 +902,7 @@ int main() {
             
         } while (option != 4);
 
-    } catch (exception e) {
+    } catch (runtime_error e) {
         cerr << "Error: " << e.what() << endl;
         return 1;
     }
