@@ -3,7 +3,6 @@
 #include <vector>
 #include <fstream>
 #include <stdexcept>
-#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <ctime>
@@ -152,7 +151,7 @@ public:
         istringstream ss(line);
         string fileEmail, filePassword;
 
-        if (getline(ss, fileEmail, ',') && std::getline(ss, filePassword, ',')) {
+        if (getline(ss, fileEmail, ',') && getline(ss, filePassword, ',')) {
             fileEmail.erase(fileEmail.find_last_not_of(" \n\r\t") + 1);
             filePassword.erase(filePassword.find_last_not_of(" \n\r\t") + 1);
 
@@ -621,7 +620,7 @@ bool validateLocation(const string location) {
 
 void operatorLogin(TrainManager trainManager) {
     string email, password;
-    cout << "\n=== Operator Login ===\n";
+    cout << "\nOperator Login\n";
     cout << "Email: ";
     cin >> email;
     cout << "Password: ";
@@ -669,7 +668,7 @@ void operatorLogin(TrainManager trainManager) {
 
         switch (option) {
             case 1: {
-                cout << "\n=== Add New Train ===\n";
+                cout << "\nAdd New Train\n";
                 Train train;
                 cout << "Train ID: ";
                 cin >> train.trainId;
@@ -703,7 +702,7 @@ void operatorLogin(TrainManager trainManager) {
                 break;
             }
             case 2: {
-                cout << "\n=== Remove Train ===\n";
+                cout << "\nRemove Train\n";
                 try {
                     string trainId;
                     cout << "Enter the train ID to remove: ";
@@ -716,7 +715,7 @@ void operatorLogin(TrainManager trainManager) {
                 break;
             }
             case 3: {
-                cout << "\n=== All Trains List ===\n";
+                cout << "\nAll Trains List\n";
                 trainManager.getAllTrains();
                 break;
             }
@@ -735,7 +734,7 @@ void operatorLogin(TrainManager trainManager) {
 
 void userLogin(UserManager userManager, TrainManager trainManager) {
     string email, password;
-    cout << "\n=== User Login ===\n";
+    cout << "\nUser Login\n";
     cout << "Email: ";
     cin >> email;
     cout << "Password: ";
@@ -805,7 +804,7 @@ void userLogin(UserManager userManager, TrainManager trainManager) {
                     }
                 } else if (option == 3) {
                     try {
-                        cout << "\n== My Reservations ==\n\n";
+                        cout << "\nMy Reservations\n";
                         trainManager.showReservations(email);
                         cout << "\n\n";
                     } catch (runtime_error e) {
@@ -815,7 +814,7 @@ void userLogin(UserManager userManager, TrainManager trainManager) {
                     string trainId;
                     int seatNumber, classType;
                     
-                    cout << "\n=== Delete Reservation ===\n";
+                    cout << "\nDelete Reservation\n";
                     cout << "Current reservations:\n";
                     try {
                         trainManager.showReservations(email);
@@ -849,7 +848,7 @@ void userLogin(UserManager userManager, TrainManager trainManager) {
 
 void registerUser(UserManager userManager) {
     string email, password, confirmPassword;
-    cout << "\n=== New User Registration ===\n";
+    cout << "\nNew User Registration\n";
     cout << "Email: ";
     cin >> email;
     cout << "Password: ";
